@@ -474,13 +474,100 @@
     }
     .fo51-letter-screen-host {
         width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
     .fo51-interactive .ogj-letter-screen-scaler {
-        padding: 0.75rem 0 1.25rem;
+        padding: 0;
+    }
+    .fo51-letter-zoom-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.65rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(248, 250, 252, 0.95);
+    }
+    .dark .fo51-letter-zoom-toolbar {
+        background: rgba(15, 23, 42, 0.65);
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    .fo51-letter-viewport {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        background: #e2e8f0;
+        padding: 0.5rem;
+        min-height: 12rem;
+        max-height: min(70vh, 52rem);
+    }
+    .fo51-modal-chrome .fo51-letter-viewport {
+        max-height: none;
+    }
+    .dark .fo51-letter-viewport {
+        background: rgba(2, 6, 23, 0.55);
+    }
+    .fo51-letter-zoom-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+        padding: 0 0.65rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        background: #fff;
+        color: #0f172a;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .dark .fo51-letter-zoom-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: #e2e8f0;
+    }
+    .fo51-letter-zoom-btn:hover {
+        background: #f1f5f9;
+    }
+    .dark .fo51-letter-zoom-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .fo51-letter-zoom-pct {
+        min-width: 3.25rem;
+        text-align: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: #334155;
+    }
+    .dark .fo51-letter-zoom-pct {
+        color: #cbd5e1;
     }
 </style>
 
 @if ($useLetterScreen)
+    @if ($fo51Interactive)
+    <div
+        class="fo51-letter-screen-host"
+        x-data="(typeof window.fo51LetterZoom === 'function' ? window.fo51LetterZoom() : { scale: 1, init() {}, percentLabel() { return '100%'; }, spacerStyle() { return {}; }, sheetStyle() { return {}; }, zoomIn() {}, zoomOut() {}, fitWidth() {} })"
+        x-init="init()"
+    >
+        <div class="fo51-letter-zoom-toolbar" role="toolbar" aria-label="Zoom del formato FO-GJ-51">
+            <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Formato</span>
+            <div class="ml-auto flex items-center gap-1">
+                <button type="button" class="fo51-letter-zoom-btn" @click="zoomOut()" aria-label="Alejar">−</button>
+                <span class="fo51-letter-zoom-pct" x-text="percentLabel()" aria-live="polite"></span>
+                <button type="button" class="fo51-letter-zoom-btn" @click="zoomIn()" aria-label="Acercar">+</button>
+                <button type="button" class="fo51-letter-zoom-btn" @click="fitWidth()">Ajustar</button>
+            </div>
+        </div>
+        <div class="fo51-letter-viewport" x-ref="fo51Viewport">
+            <div :style="spacerStyle()">
+                <div class="ogj-letter-screen-sheet" x-ref="fo51LetterSheet" :style="sheetStyle()">
+    @else
     <div
         class="fo51-letter-screen-host"
         x-data="{ scale: 1 }"
@@ -498,6 +585,7 @@
     >
         <div class="ogj-letter-screen-scaler">
             <div class="ogj-letter-screen-sheet" x-ref="fo51LetterSheet" :style="`transform: scale(${scale});`">
+    @endif
 @endif
 
 <div @class(['fo51-interactive' => $fo51Interactive, 'fo51-pdf' => $isPdfRender])>
@@ -937,9 +1025,16 @@
 </div>
 
 @if ($useLetterScreen)
+    @if ($fo51Interactive)
+                </div>
             </div>
         </div>
     </div>
+    @else
+            </div>
+        </div>
+    </div>
+    @endif
 @endif
 
 @if ($useAuthPreparer && $user && ! $blankForDownload)

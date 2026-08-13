@@ -77,8 +77,31 @@ class SupervisorEvidenceQueueTest extends TestCase
         Livewire::actingAs($supervisor)
             ->test(PendingEvidenceIndex::class)
             ->call('openFo51Modal', true)
+            ->assertSet('showFo51Modal', false)
+            ->assertSet('showFo51PdfUploadModal', true)
+            ->assertSet('fo51OpenPdfFirst', true)
+            ->assertSee('1 · Archivo del informe')
+            ->assertSee('Suelte el PDF aquí')
+            ->assertSee('Ampliar')
+            ->assertSee('Abrir en pestaña')
+            ->assertSee('PDF.js')
+            ->assertSee('fo51PdfUploadFileZone', false)
+            ->assertSee('4 · Faltas')
+            ->assertSee('Marque una o varias faltas')
+            ->assertSee('Guardar')
+            ->assertSee('fo51PdfUploadFaultsPicker', false)
+            ->assertSee('Otros')
+            ->assertSee('saveDraft', false)
+            ->assertDontSee('addPending', false)
+            ->assertDontSee('Columna izquierda')
+            ->assertDontSee('Capturar firma');
+
+        Livewire::actingAs($supervisor)
+            ->test(PendingEvidenceIndex::class)
+            ->call('openFo51Modal', false)
             ->assertSet('showFo51Modal', true)
-            ->assertSet('fo51OpenPdfFirst', true);
+            ->assertSet('showFo51PdfUploadModal', false)
+            ->assertSet('fo51OpenPdfFirst', false);
     }
 
     public function test_queue_excludes_cases_outside_supervisor_scope(): void

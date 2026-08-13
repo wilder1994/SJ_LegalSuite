@@ -50,6 +50,7 @@ class StoreFoGj51InformePdfRequest extends FormRequest
             'fo51_municipality_code' => ['nullable', 'string', 'size:5', Rule::exists('colombian_municipalities', 'municipality_code')],
             'fo51_shift' => ['nullable', 'string', 'max:120'],
             'fo51_position' => ['nullable', 'string', 'max:120'],
+            'fo51_worker_cargo' => ['nullable', 'string', 'max:120'],
             'fo51_fault_left' => ['nullable', 'array'],
             'fo51_fault_left.*' => ['string', Rule::in(FoGj51Catalog::faultLeft())],
             'fo51_fault_right' => ['nullable', 'array'],

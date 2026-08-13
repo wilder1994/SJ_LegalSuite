@@ -405,9 +405,33 @@ Etiquetas inline con `fo51-inline-lbl` + valor en `fo51-personal-val`. En móvil
 
 ### Firma del elaborador
 
-- Pantalla: `sjFo51PreparerSignature()` + `signature-capture-modal-alpine` → `fo51_preparer_signature` (data URI PNG).
-- PDF: `<img class="fo51-signature-img">` si hay firma capturada.
-- Validación: `PngSignatureDataUri` en `StoreFoGj51InformePdfRequest` / `FoGj51ProcessRequest`.
+- Pantalla digitada: `sjFo51PreparerSignature()` + `signature-capture-modal-alpine` → `fo51_preparer_signature` (data URI PNG).
+- PDF generado: `<img class="fo51-signature-img">` si hay firma capturada.
+- Validación: `PngSignatureDataUri` en `StoreFoGj51InformePdfRequest` / `FoGj51ProcessRequest` (**solo** acciones `pdf` y `enviar`; **no** en `cargar`).
+
+### 8.1 Cargar PDF externo (modal standalone + PDF.js)
+
+Flujo distinto al digitado: el usuario **adjunta** un FO-GJ-51 ya generado (escáner / otro sistema) y metadatos para la cola de revisión.
+
+| Pieza | Rol |
+|-------|-----|
+| `fo-gj-51-pdf-upload-modal.blade.php` | UI del modal (Livewire o página completa) |
+| `fo51-pdf-upload-file.js` | Dropzone: clic, drag/drop, pegar; orquesta preview |
+| `fo51-pdfjs-scroll-viewer.js` | Render PDF.js → canvas en contenedor `overflow-y-auto` (scroll real) |
+| `fo51-pdf-upload-faults.js` | Panel multi-checkbox + «Guardar» + Otros fijo |
+| `FoGj51InformeController::uploadToRevisionQueue` | Persiste PDF + evidencias + snapshot |
+| `pdfjs-dist` (npm) | Dependencia front; **no** sustituye Dompdf/Browsershot |
+
+**Contrato**
+
+1. Livewire: `openFo51Modal(true)` / `cargar_pdf=1` → solo `showFo51PdfUploadModal` (sin Letter digitada detrás).
+2. Preview: páginas pintadas con PDF.js; worker y chunk en `public/build` tras `npm run build` / Vite.
+3. POST `fo51_action=cargar`: `informe_file` + `informe_worker_*` + metadatos + `fo51_fault_*` opcionales + `evidence_images` ≤10 + revisor; **sin** firma elaborador.
+4. Independiente del pipeline HTML→Letter de este documento (§1–§7): no cambia `HtmlLetterPdfGenerator` ni `PDF_DRIVER`.
+
+**Hosting:** desplegar assets Vite (`public/build`, incl. `pdf.worker*.mjs`). Si falla el worker/CSP, el modal muestra aviso y permite «Abrir en pestaña»; el envío del archivo sigue válido.
+
+**Tests:** `SupervisorEvidenceQueueTest` (abre modal PDF), `FoGj51PreparerSignatureTest` (cargar + evidencias + faltas en snapshot).
 
 ### Expectativa Dompdf
 
@@ -418,9 +442,12 @@ Forma canónica con observaciones cortas + firma: **1 página física** (`FoGj51
 | Archivo | Rol |
 |---------|-----|
 | `fo-gj-51-preview.blade.php` | Plantilla + estilos FO-GJ-51 + modos pantalla/PDF |
-| `fo-gj-51-informe-body.blade.php` | Form POST, evidencias, modales |
-| `fo-gj-51-informe-modal-shell.blade.php` | Modal listado / evidencias |
+| `fo-gj-51-informe-body.blade.php` | Form POST digitado, evidencias |
+| `fo-gj-51-informe-modal-shell.blade.php` | Modal digitado listado / hub |
+| `fo-gj-51-pdf-upload-modal.blade.php` | Modal **Cargar PDF** |
 | `fo-gj-51-screen-mobile.blade.php` | CSS móvil (solo `.fo51-interactive`) |
+| `fo51-letter-zoom.js` | Zoom/pan Letter en modal digitado |
+| `fo51-pdfjs-scroll-viewer.js` | Preview cliente PDF.js |
 | `official-letter-pdf-shell.blade.php` | Encabezado FO-GJ-51 (logo, meta, código) |
 | `official-letter-pdf-styles.blade.php` | Letter compartido + reglas `.ogj-letter-screen-sheet` |
 
@@ -432,6 +459,9 @@ Forma canónica con observaciones cortas + firma: **1 página física** (`FoGj51
 | Casilla de falta pegada al texto en PDF | Flex en `fo51-fault-line` | Debe renderizarse `fo51-fault-line-tbl` |
 | Grilla trabajador “inflada” en PDF | Flex en `fo51-personal-inner` | Reglas `.fo51-pdf .fo51-personal-inner { display: table }` |
 | HTML carrado a la izquierda, bloque cuadrado | Sin `ogj-letter-screen-sheet` | Solo afecta pantalla; envolver preview interactivo |
+| Preview carga PDF sin scroll / plugin Chrome | Iframe nativo + blob | Debe usarse PDF.js (`fo51-pdfjs-scroll-viewer`); rebuild Vite |
+| «No se pudo previsualizar» con páginas visibles | Estado UI tras `destroy()` | Generación de render en `fo51-pdf-upload-file.js` |
+| Chunk PDF.js 404 en hosting | `public/build` desactualizado | `npm run build` y desplegar `public/build` |
 | Doble R: / guía + respuesta | N/A en FO-GJ-51 | (FO-GJ-04: ver sección 7) |
 
 ### Tests
@@ -465,7 +495,8 @@ FO-GJ-44, FO-GJ-54, FO-GJ-45/46/47, ACTA-COMITE (corto); FO-GJ-51 detallado en *
 | `DompdfLetterPdfDriverTest` | `tests/Unit/Support/Pdf/DompdfLetterPdfDriverTest.php` | Smoke del driver |
 | `LetterPdfDriverTest` | `tests/Unit/Support/Pdf/LetterPdfDriverTest.php` | Selección de driver |
 | `EmbeddedPdfFontTest` | `tests/Unit/Support/Pdf/EmbeddedPdfFontTest.php` | TTF presentes |
-| `FoGj51PreparerSignatureTest` | `tests/Feature/Disciplinary/FoGj51PreparerSignatureTest.php` | FO-GJ-51 pantalla vs PDF, 1 hoja Dompdf |
+| `FoGj51PreparerSignatureTest` | `tests/Feature/Disciplinary/FoGj51PreparerSignatureTest.php` | FO-GJ-51 pantalla vs PDF, 1 hoja Dompdf, cargar+evidencias |
+| `SupervisorEvidenceQueueTest` | `tests/Feature/Disciplinary/SupervisorEvidenceQueueTest.php` | Hub supervisor + modal cargar PDF |
 | `FoGj03DraftTest` / `FoGj04DraftTest` | `tests/Feature/Disciplinary/` | Rutas + preview inline |
 
 ### Metodología «planned vs physical»
@@ -578,6 +609,8 @@ app/Services/Disciplinary/
 
 resources/views/components/disciplinary/forms/
   fo-gj-51-preview.blade.php       ← FO-GJ-51 pantalla + PDF (.fo51-pdf)
+  fo-gj-51-pdf-upload-modal.blade.php ← Cargar PDF externo (PDF.js preview)
+  fo51-pdfjs-scroll-viewer.js      ← Chunk Vite pdfjs-dist (solo modal cargar)
 
 resources/views/disciplinary/forms/
   partials/official-letter-pdf-styles.blade.php

@@ -53,10 +53,13 @@ class CasesIndex extends Component
 
     public bool $showAdvancedFilters = false;
 
-    /** Abre el modal FO-GJ-51 en esta misma pantalla. */
+    /** Abre el modal FO-GJ-51 digitado en esta misma pantalla. */
     public bool $showFo51Modal = false;
 
-    /** Si true, el submodal «Cargar PDF» queda abierto al mostrar el formulario. */
+    /** Modal standalone «Cargar informe en PDF». */
+    public bool $showFo51PdfUploadModal = false;
+
+    /** Si true, el flujo abrió primero la carga PDF (validación / deep-link). */
     public bool $fo51OpenPdfFirst = false;
 
     public ?string $fo51PrefillName = null;
@@ -95,15 +98,20 @@ class CasesIndex extends Component
             $this->stage = '';
         }
 
-        if (request()->boolean('informe_modal')) {
+        if (request()->boolean('informe_modal') || request()->boolean('cargar_pdf')) {
             Gate::authorize('generateFo51Inform', DisciplinaryCase::class);
 
-            $this->showFo51Modal = true;
-            $this->fo51OpenPdfFirst = request()->boolean('cargar_pdf');
             $n = request()->string('nombre')->trim()->toString();
             $c = request()->string('cedula')->trim()->toString();
             $this->fo51PrefillName = $n !== '' ? $n : null;
             $this->fo51PrefillDocument = $c !== '' ? $c : null;
+
+            if (request()->boolean('cargar_pdf')) {
+                $this->showFo51PdfUploadModal = true;
+                $this->fo51OpenPdfFirst = true;
+            } else {
+                $this->showFo51Modal = true;
+            }
         }
     }
 
@@ -113,12 +121,27 @@ class CasesIndex extends Component
         $this->fo51PrefillName = null;
         $this->fo51PrefillDocument = null;
         $this->fo51OpenPdfFirst = $openPdfFirst;
+
+        if ($openPdfFirst) {
+            $this->showFo51Modal = false;
+            $this->showFo51PdfUploadModal = true;
+
+            return;
+        }
+
+        $this->showFo51PdfUploadModal = false;
         $this->showFo51Modal = true;
     }
 
     public function closeFo51Modal(): void
     {
         $this->showFo51Modal = false;
+        $this->fo51OpenPdfFirst = false;
+    }
+
+    public function closeFo51PdfUploadModal(): void
+    {
+        $this->showFo51PdfUploadModal = false;
         $this->fo51OpenPdfFirst = false;
     }
 

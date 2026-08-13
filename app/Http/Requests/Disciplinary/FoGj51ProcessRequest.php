@@ -87,6 +87,25 @@ class FoGj51ProcessRequest extends FormRequest
                 'max:15360',
             ],
 
+            'fo51_report_dd' => [
+                Rule::requiredIf(fn () => (string) $this->input('fo51_action') === 'cargar'),
+                'nullable',
+                'string',
+                'max:2',
+            ],
+            'fo51_report_mm' => [
+                Rule::requiredIf(fn () => (string) $this->input('fo51_action') === 'cargar'),
+                'nullable',
+                'string',
+                'max:2',
+            ],
+            'fo51_report_yyyy' => [
+                Rule::requiredIf(fn () => (string) $this->input('fo51_action') === 'cargar'),
+                'nullable',
+                'string',
+                'max:4',
+            ],
+
             'evidence_images' => ['nullable', 'array', 'max:10'],
             'evidence_images.*' => ['nullable', 'image', 'max:5120'],
         ]);
@@ -116,6 +135,15 @@ class FoGj51ProcessRequest extends FormRequest
             $merge['informe_worker_document'] = Employee::normalizeDocumentNumber((string) $this->input('informe_worker_document'));
         }
 
+        if ((string) $this->input('fo51_action') === 'cargar') {
+            if (! $this->filled('fo51_worker_name') && $this->filled('informe_worker_name')) {
+                $merge['fo51_worker_name'] = trim((string) $this->input('informe_worker_name'));
+            }
+            if (! $this->filled('fo51_worker_document') && $this->filled('informe_worker_document')) {
+                $merge['fo51_worker_document'] = Employee::normalizeDocumentNumber((string) $this->input('informe_worker_document'));
+            }
+        }
+
         $this->merge($merge);
     }
 
@@ -124,15 +152,29 @@ class FoGj51ProcessRequest extends FormRequest
         $validator->sometimes(
             'fo51_municipality_code',
             ['required', 'string', 'size:5', Rule::exists('colombian_municipalities', 'municipality_code')],
-            fn () => in_array((string) $this->input('fo51_action'), ['pdf', 'enviar'], true)
+            fn () => in_array((string) $this->input('fo51_action'), ['pdf', 'enviar', 'cargar'], true)
         );
     }
 
     protected function failedValidation(Validator $validator): void
     {
         $action = (string) $this->input('fo51_action');
+        $user = $this->user();
 
-        if (! Gate::allows('viewAny', DisciplinaryCase::class)) {
+        if ($user && ! Gate::allows('viewAny', DisciplinaryCase::class)) {
+            if ($user->hasRole('nivel7')) {
+                $params = [];
+                if ($action === 'cargar') {
+                    $params['cargar_pdf'] = 1;
+                    $params['informe_modal'] = 1;
+                } elseif (in_array($action, ['pdf', 'enviar'], true)) {
+                    $params['informe_modal'] = 1;
+                }
+
+                throw (new ValidationException($validator))
+                    ->redirectTo(route('disciplinary.evidences-pending.index', $params));
+            }
+
             $params = ['vista_completa' => 1];
             if ($action === 'cargar') {
                 $params['cargar_pdf'] = 1;

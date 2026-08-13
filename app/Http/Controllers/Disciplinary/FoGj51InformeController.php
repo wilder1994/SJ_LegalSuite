@@ -326,11 +326,19 @@ class FoGj51InformeController
         try {
             $employee = $resolver->resolveForDisciplinaryActor(
                 $request->user(),
-                null,
+                isset($validated['fo51_employee_id']) ? (int) $validated['fo51_employee_id'] : null,
                 (string) ($validated['informe_worker_document'] ?? ''),
             );
         } catch (\InvalidArgumentException $e) {
-            if (! Gate::allows('viewAny', DisciplinaryCase::class)) {
+            $user = $request->user();
+            if ($user && ! Gate::allows('viewAny', DisciplinaryCase::class)) {
+                if ($user->hasRole('nivel7')) {
+                    return redirect()
+                        ->route('disciplinary.evidences-pending.index', ['informe_modal' => 1, 'cargar_pdf' => 1])
+                        ->withInput()
+                        ->withErrors(['informe_worker_document' => $e->getMessage()]);
+                }
+
                 return redirect()
                     ->route('disciplinary.forms.informe-fo-gj-51', ['vista_completa' => 1, 'cargar_pdf' => 1])
                     ->withInput()
@@ -346,7 +354,15 @@ class FoGj51InformeController
         $v = array_merge($this->onlyFo51FormFields($validated), [
             'informe_declared_worker_name' => trim((string) ($validated['informe_worker_name'] ?? '')),
             'informe_declared_worker_document' => Employee::normalizeDocumentNumber((string) ($validated['informe_worker_document'] ?? '')),
+            'fo51_worker_name' => trim((string) ($validated['informe_worker_name'] ?? '')),
+            'fo51_worker_document' => Employee::normalizeDocumentNumber((string) ($validated['informe_worker_document'] ?? '')),
         ]);
+
+        $evidenceImages = collect($request->file('evidence_images', []))
+            ->filter(fn ($f) => $f instanceof UploadedFile && $f->isValid())
+            ->take(10)
+            ->values()
+            ->all();
 
         app(DisciplinaryInformeSubmissionService::class)->storePending(
             $file,
@@ -357,6 +373,7 @@ class FoGj51InformeController
             isset($validated['informe_worker_name'])
                 ? mb_substr(trim((string) $validated['informe_worker_name']), 0, 120)
                 : null,
+            $evidenceImages,
         );
 
         return redirect()
@@ -388,6 +405,7 @@ class FoGj51InformeController
             'informe_file',
             'informe_worker_name',
             'informe_worker_document',
+            'evidence_images',
         ]);
     }
 

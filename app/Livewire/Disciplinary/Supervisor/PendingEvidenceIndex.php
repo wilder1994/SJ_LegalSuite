@@ -83,6 +83,8 @@ class PendingEvidenceIndex extends Component
 
     public bool $showFo51Modal = false;
 
+    public bool $showFo51PdfUploadModal = false;
+
     public bool $fo51OpenPdfFirst = false;
 
     public ?string $fo51PrefillName = null;
@@ -93,14 +95,19 @@ class PendingEvidenceIndex extends Component
     {
         abort_unless(auth()->user()->hasRole('nivel7'), 403);
 
-        if (request()->boolean('informe_modal')) {
+        if (request()->boolean('informe_modal') || request()->boolean('cargar_pdf')) {
             Gate::authorize('generateFo51Inform', DisciplinaryCase::class);
-            $this->showFo51Modal = true;
-            $this->fo51OpenPdfFirst = request()->boolean('cargar_pdf');
             $n = trim((string) request()->query('nombre', ''));
             $c = trim((string) request()->query('cedula', ''));
             $this->fo51PrefillName = $n !== '' ? $n : null;
             $this->fo51PrefillDocument = $c !== '' ? $c : null;
+
+            if (request()->boolean('cargar_pdf')) {
+                $this->showFo51PdfUploadModal = true;
+                $this->fo51OpenPdfFirst = true;
+            } else {
+                $this->showFo51Modal = true;
+            }
         }
     }
 
@@ -127,12 +134,27 @@ class PendingEvidenceIndex extends Component
         $this->fo51PrefillName = null;
         $this->fo51PrefillDocument = null;
         $this->fo51OpenPdfFirst = $openPdfFirst;
+
+        if ($openPdfFirst) {
+            $this->showFo51Modal = false;
+            $this->showFo51PdfUploadModal = true;
+
+            return;
+        }
+
+        $this->showFo51PdfUploadModal = false;
         $this->showFo51Modal = true;
     }
 
     public function closeFo51Modal(): void
     {
         $this->showFo51Modal = false;
+        $this->fo51OpenPdfFirst = false;
+    }
+
+    public function closeFo51PdfUploadModal(): void
+    {
+        $this->showFo51PdfUploadModal = false;
         $this->fo51OpenPdfFirst = false;
     }
 

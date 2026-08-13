@@ -10,6 +10,7 @@
         "apexcharts": "^3.54.1",
         "laravel-echo": "^2.3.4",
         "leaflet": "^1.9.4",
+        "pdfjs-dist": "^6.2.108",
         "pusher-js": "^8.5.0"
     },
     "devDependencies": {

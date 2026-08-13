@@ -70,8 +70,76 @@ class FoGj51PreparerSignatureTest extends TestCase
             'fo51_action' => 'enviar',
         ]);
 
-        $response->assertRedirect(route('disciplinary.forms.informe-fo-gj-51', ['vista_completa' => 1]));
+        $response->assertRedirect(route('disciplinary.evidences-pending.index', ['informe_modal' => 1]));
         $response->assertSessionHasErrors();
+    }
+
+    public function test_cargar_validation_errors_redirect_supervisor_to_pdf_upload_modal(): void
+    {
+        $supervisor = $this->makeSupervisor();
+
+        $response = $this->actingAs($supervisor)->post(route('disciplinary.forms.informe.process'), [
+            'fo51_action' => 'cargar',
+        ]);
+
+        $response->assertRedirect(route('disciplinary.evidences-pending.index', [
+            'cargar_pdf' => 1,
+            'informe_modal' => 1,
+        ]));
+        $response->assertSessionHasErrors();
+    }
+
+    public function test_cargar_with_evidence_stores_pending_submission(): void
+    {
+        $supervisor = $this->makeSupervisor();
+        $employee = $this->makeEmployee();
+        $this->seedMunicipality('76001', 'Cali');
+
+        $reviewer = User::factory()->create([
+            'email' => 'ops-cargar-'.random_int(1000, 9999).'@test.local',
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $reviewer->assignRole('nivel2');
+
+        $pdf = \Illuminate\Http\UploadedFile::fake()->create('informe.pdf', 120, 'application/pdf');
+        $evidence = \Illuminate\Http\UploadedFile::fake()->image('prueba.jpg', 80, 80);
+
+        $response = $this->actingAs($supervisor)->post(route('disciplinary.forms.informe.process'), [
+            'fo51_action' => 'cargar',
+            'fo51_assigned_reviewer_id' => $reviewer->id,
+            'fo51_employee_id' => $employee->id,
+            'informe_worker_name' => $employee->full_name,
+            'informe_worker_document' => $employee->document_number,
+            'fo51_municipality_code' => '76001',
+            'fo51_report_dd' => '13',
+            'fo51_report_mm' => '08',
+            'fo51_report_yyyy' => '2026',
+            'fo51_shift' => 'Mañana',
+            'fo51_position' => 'Puesto 1',
+            'fo51_fault_left' => ['Retardo al Servicio'],
+            'fo51_fault_right' => ['Incumplimiento de consignas'],
+            'fo51_fault_other_chk' => '1',
+            'fo51_fault_other_detail' => 'Falta adicional de prueba',
+            'informe_file' => $pdf,
+            'evidence_images' => [$evidence],
+        ]);
+
+        $response->assertRedirect(route('disciplinary.evidences-pending.index'));
+        $response->assertSessionHas('success');
+
+        $submission = \App\Models\Disciplinary\InformeSubmission::query()->latest('id')->first();
+        $this->assertNotNull($submission);
+        $this->assertSame($employee->id, $submission->employee_id);
+        $this->assertSame($reviewer->id, $submission->assigned_reviewer_id);
+        $this->assertIsArray($submission->evidence_paths);
+        $this->assertCount(1, $submission->evidence_paths);
+        $this->assertSame('76001', data_get($submission->form_snapshot, 'fo51_municipality_code'));
+        $this->assertSame(['Retardo al Servicio'], data_get($submission->form_snapshot, 'fo51_fault_left'));
+        $this->assertSame(['Incumplimiento de consignas'], data_get($submission->form_snapshot, 'fo51_fault_right'));
+        $this->assertTrue((bool) data_get($submission->form_snapshot, 'fo51_fault_other_chk'));
+        $this->assertSame('Falta adicional de prueba', data_get($submission->form_snapshot, 'fo51_fault_other_detail'));
     }
 
     public function test_filled_pdf_view_renders_preparer_signature_image(): void

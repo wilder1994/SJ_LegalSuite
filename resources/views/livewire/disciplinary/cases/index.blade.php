@@ -388,8 +388,17 @@
         @include('disciplinary.forms.partials.fo-gj-51-informe-modal-shell', [
             'prefillWorkerName' => $fo51PrefillName,
             'prefillWorkerDocument' => $fo51PrefillDocument,
-            'openPdfUploadModal' => $fo51OpenPdfFirst,
+            'openPdfUploadModal' => false,
             'operacionesReviewers' => $operacionesReviewers,
+        ])
+    @endif
+
+    @if ($showFo51PdfUploadModal)
+        @include('disciplinary.forms.partials.fo-gj-51-pdf-upload-modal', [
+            'prefillWorkerName' => $fo51PrefillName,
+            'prefillWorkerDocument' => $fo51PrefillDocument,
+            'operacionesReviewers' => $operacionesReviewers,
+            'livewireClose' => true,
         ])
     @endif
 </div>
