@@ -118,13 +118,14 @@ Frontend: **`resources/js/home-command-center.js`** (ApexCharts) monta gráficas
 
 ### Módulo Disciplinario
 
-Sub-nav superior (según permisos y rol): por defecto **Inicio | Dashboard | Disciplinarios | (Revisión informes) | Formatos | Historial**. **Rol `admin`:** **Inicio** → command center (`GET /dashboard`); el módulo **Disciplinarios** en el sidebar → `User::disciplinaryPortalUrl()` (dashboard disciplinario). El enlace *Revisión informes* aparece quienes tienen **`disciplinary.review-inform`** (`InformeSubmissionPolicy::viewAny`). **Rol `abogado`:** `GET /disciplinary` y el ítem **Dashboard** llevan al tablero disciplinario; el ítem **Disciplinarios** del **sub-nav** usa `User::disciplinaryCasesNavUrl()` → **listado** `GET /disciplinary/cases` (el sidebar del módulo también entra por `disciplinaryPortalUrl()` → dashboard). **Rol `planeacion`:** en el sub-nav disciplinario solo **Coordinaciones** (`GET /disciplinary/coordinations`). **Rol `supervisor`:** sidebar/sub-nav **Supervisión** → **portal de campo** (`GET /disciplinary/evidences-pending`, título «Mi trabajo»): CRUD **FO-GJ-51** + bandeja de notificaciones Citación/Decisión; si llega por URL «intended» al dashboard o listado de casos, se redirige al portal (`disciplinaryPortalUrl`). Planeación y supervisor quedan sin acceso al listado/detalle general de expedientes.
+Sub-nav superior (según permisos y rol): por defecto **Inicio | Dashboard | Disciplinarios | (Revisión informes) | Formatos**; el ítem **Historial** es **solo supervisor (`nivel7`)**. **Rol `admin`:** **Inicio** → command center (`GET /dashboard`); el módulo **Disciplinarios** en el sidebar → `User::disciplinaryPortalUrl()` (dashboard disciplinario). El enlace *Revisión informes* aparece quienes tienen **`disciplinary.review-inform`** (`InformeSubmissionPolicy::viewAny`). **Rol `abogado`:** `GET /disciplinary` y el ítem **Dashboard** llevan al tablero disciplinario; el ítem **Disciplinarios** del **sub-nav** usa `User::disciplinaryCasesNavUrl()` → **listado** `GET /disciplinary/cases` (el sidebar del módulo también entra por `disciplinaryPortalUrl()` → dashboard). **Rol `planeacion`:** en el sub-nav disciplinario solo **Coordinaciones** (`GET /disciplinary/coordinations`). **Rol `supervisor`:** sidebar/sub-nav **Supervisión** → **portal de campo** (`GET /disciplinary/evidences-pending`, título «Mi trabajo»): CRUD **FO-GJ-51** + bandeja de notificaciones Citación/Decisión; más **Historial** (`GET /disciplinary/historial`, bitácora textual propia); si llega por URL «intended» al dashboard o listado de casos, se redirige al portal (`disciplinaryPortalUrl`). Planeación y supervisor quedan sin acceso al listado/detalle general de expedientes.
 
 | Vista | Contenido |
 |---|---|
 | **Dashboard** | Vista **cockpit** sin scroll: cabecera contextual por rol (admin global / abogado «Mi tablero» solo casos **asignados**). **7 donas** A–F (misma paleta neon). **Mapa Colombia** hero (~55% ancho) + panel derecho en **3 filas de altura fija**: **Top municipios**, **casos por tipo de falta** (catálogo activo completo con ceros, micro-barras HTML con scroll interno), **Mi carga** (abogado) o mini ranking de abogados (admin). Sin chips de alerta. `DisciplinaryDashboardService::usesAssignedOnlyScope()` para abogado. JS: `disciplinary-dashboard.js` + `disciplinary-colombia-map.js`. Tests: `DisciplinaryDashboardScopeTest.php`. |
 | **Disciplinarios** (listado) | Vista **cockpit** sin scroll: cabecera compacta, **rail A–F**, **Cerrados** / **Todos** (Operaciones no ve Cerrados), filtros y tabla con **Etapa**. Alcance `forDisciplinaryActor`. **Operaciones (`nivel2`):** solo casos **abiertos** que **autorizó** (`informeSubmission.reviewed_by`; con `review-inform-all` todos los abiertos); sin Formatos; trámite «En trámite · Etapa X». Tests: `DisciplinaryCasesIndexStageTest`, `DisciplinaryOperacionesCaseScopeTest`. **Coordinaciones** (`planeacion` / `nivel3`): cockpit full-height — bandeja + hilo chat (burbujas), KPIs abiertas/fechas/notif., búsqueda; candidatos a supervisor por `employee.municipality_code` (eager load completo). **Bandeja compartida (INFORME):** claim atómico del abogado. Botones FO-GJ-51 en modal. |
 | **Portal supervisor** (`evidences-pending`) | **Hub de campo** (no solo «evidencias»): cockpit sin scroll (`max-w-[1600px]`). Cabecera **Mi trabajo** + zona asignada; bloque **Informes disciplinarios FO-GJ-51** (**Nuevo informe** = digitado Letter; **Cargar PDF** = modal propio, sin digitado detrás); KPIs Citación/Decisión/Zona en `lg+`; rail **Citación / Decisión / Todos**; búsqueda; **bandeja inbox** (tarjetas táctiles en móvil · filas densas en `lg+`, **sin tabla HTML**). Acciones por tarea: **Cargar PDF** y **Ver notificación** (escaneado → carta HTML → firma → preview; lógica Livewire/modales intacta). Empty state alineado al hub. Sidebar/nav: **Supervisión** (`User::minimalDisciplinarySidebarLabel`). Tests: `PendingEvidenceUploadTest`, `SupervisorEvidenceQueueTest`, `DecisionStageCompletionTest`. |
+| **Historial supervisor** (`historial`) | Bitácora **solo lectura / solo texto** del supervisor logueado (`nivel7`): informes FO-GJ-51 que envió (`InformeSubmission.submitted_by`) + evidencias de citación/decisión que cargó (`DisciplinaryDocument.uploaded_by` + notas `NOTE_*_EVIDENCE_PREFIX`). Livewire `Supervisor/HistoryIndex` + `SupervisorActivityHistoryService`. UI: feed por día, chips Todo/Informes/Citaciones/Decisiones, búsqueda por nombre o cédula. **No** muestra número de expediente, rutas de archivo, preview PDF ni enlaces al caso (`view`/`viewAny` siguen denegados). Otros roles: 403. Tests: `SupervisorHistoryTest.php`. |
 | **Revisión informes** | Cockpit senior (`InformesPendientes`): KPI **Pendientes**, búsqueda densa, filas compactas con `displayName()`, aviso de stale ≥24 h, acciones **Ver** / **Autorizar** / **Rechazar** (modales propios). Cola `InformeSubmission` pendiente: vista previa PDF (`?inline=1`). Revisor asignado con `disciplinary.review-inform`; dirección con `disciplinary.review-inform-all`. Al autorizar se crea el expediente y el PDF entra al caso. Tests: `InformesPendientesUiTest.php`. |
 | **Detalle del caso** | **Encabezado compacto**: número de caso; **← Volver al listado**, badge de estado y acciones de Informe si aplican. Tabs: **Gestión** / Línea de tiempo / Documentos / Actuaciones (+ Historial por cédula según rol). **Operaciones (`nivel2`):** sin tabs jurídicos — seguimiento `operaciones-follow-up` («En trámite · Etapa X»). **Pestaña Gestión (jurídico):** ficha (`case-summary-strip`) + **tarjetas A–D** (`CaseStageCardState`). Modal de etapa: `case-stage-modal-shell` + body (`stage-a`…`stage-d`); shell `z-[68]`; modales FO-GJ / decisión en pie a **`z-[85+]`** para no quedar detrás. **FAB «Chat planeación»** → **drawer derecho** (`planning-chat-modal`) con burbujas L/R (`agenda-message` + perspective), composer y lightbox. **Etapa B · evidencia:** dropzone PDF, tipo en cards, **Ver** (preview modal) y **Descargar** por separado. Tests: `CaseDetailStageViewsTest`, `DisciplinaryCitationStageFlowTest`, `DecisionStageFlowTest`, `DisciplinaryOperacionesCaseScopeTest`. Echo `disciplinary.case.{id}`. |
 | **Formatos** | Catálogo FO-GJ por etapa A–F; **oculto** para **Operaciones (`nivel2`)** (`viewOfficialForms` denegado) y portales mínimos / nivel3. **Membrete** del acta de comité (PNG/JPEG) vía `OrganizationLetterheadService`. **Plantilla** / **Descarga** de PDFs en blanco (Browsershot Letter para códigos del catálogo HTML). Rutas: `GET …/formats`, `preview/{code}`, `descarga-en-blanco/{code}`, `membrete`. |
@@ -230,7 +231,7 @@ Ruta: **`GET /settings/zonas-supervision`** · permiso `settings.manage-supervis
 | Vista | Contenido |
 |---|---|
 | **Listado / CRUD** | Catálogo `supervision_zones` (nombre, código, email de notificación corporativa, activo, orden). Alta/edición/baja con validaciones (no borrar si hay casos o miembros). |
-| **Asignación** | Los supervisores (`nivel7`) se vinculan a **una zona** en **Usuarios → crear/editar** (pivot `supervision_zone_user`). La cola de notificaciones y las policies de evidencia usan **membresía de zona**, no un FK a persona. |
+| **Asignación** | Los supervisores (`nivel7`) se vinculan a **una zona** en **Usuarios → crear/editar** (pivot `supervision_zone_user`). La cola de notificaciones y las policies de evidencia usan **membresía de zona**, no un FK a persona. El **Historial** del supervisor (`GET /disciplinary/historial`) lista solo su propia actividad en texto (no abre expedientes). |
 | **Lugar vs zona** | **Zona de supervisión** = ámbito operativo del equipo. **Lugar** (`notification_zone` / `decision_notification_zone`) = texto del sitio físico del turno en la notificación. |
 
 Migración: `2026_08_13_100000_create_supervision_zones_and_reassign_notifications.php` (MySQL: quita FKs legacy a supervisor persona; SQLite en tests las conserva). Redirect legacy `/users/zonas-supervision` → settings. Seed demo: zona + supervisor en `DemoUsersSeeder`.
@@ -349,14 +350,14 @@ app/
     Disciplinary/              CaseService, WorkflowService, DashboardService, AgendaThreadService, CitationWorkflowService, CitationNotificationService, **SupervisionZoneService**, DecisionCoordinationService, FoGj03CitationService, **FoGj03CitationArticleResolver**, FoGj03DraftService, FoGj04/44/54…, DiligenceAttendanceService, …
     Employees/                 EmployeeBulkImportService, EmployeeTerritoryResolver, EmployeeResolver
     Settings/                  ColombianMunicipalityImportService, **CitationFaultTemplateService**
-  Support/Disciplinary/        FieldDisciplinaryScopeService, **SupervisorEvidenceQueueService** (cola por zona)
+  Support/Disciplinary/        FieldDisciplinaryScopeService, **SupervisorEvidenceQueueService** (cola por zona), **SupervisorActivityHistoryService** (bitácora textual nivel7)
   Policies/                    DisciplinaryCasePolicy, UserPolicy, InformeSubmissionPolicy, EmployeePolicy
   Livewire/
     Employees/                 EmployeesIndex (CRUD + carga masiva con progreso)
     Home.php                   Command center de inicio (solo admin)
     Auth/                      ForcePasswordChange, LogoutButton
     Users/                     UsersIndex, UserDetail, OrganizationCatalog (áreas + cargos + catálogo empleados)
-    Disciplinary/              Dashboard, CasesIndex, CaseDetail, FormatsCatalog, InformesPendientes; **Supervisor/PendingEvidenceIndex** (hub Mi trabajo); FO-GJ-51 parcial/modal
+    Disciplinary/              Dashboard, CasesIndex, CaseDetail, FormatsCatalog, InformesPendientes; **Supervisor/PendingEvidenceIndex** (hub Mi trabajo); **Supervisor/HistoryIndex** (historial textual); FO-GJ-51 parcial/modal
     Settings/                  TerritoryImport, **CitationArticlesIndex**, **DiligenceQuestionsIndex**, **SupervisionZonesIndex**
     Ui/                        ThemeToggle (preferencia tema usuario)
   Http/
@@ -386,7 +387,7 @@ resources/views/
     auth/                      force-password-change (primer login)
     ui/                        Controles UI compartidos (`btn` con variantes `sj-btn`, selector de tema)
     settings/                  territory-import, citation-articles-index, diligence-questions-index, supervision-zones-index
-    disciplinary/supervisor/   pending-evidence-index (hub responsive) + partials/pending-evidence-modals
+    disciplinary/supervisor/   pending-evidence-index (hub responsive) + partials/pending-evidence-modals; **history-index** (feed textual)
   disciplinary/forms/        FO-GJ-51 (informe; parciales `fo-gj-51-informe-body`, `fo-gj-51-screen-mobile`);
                                FO-GJ-03/44/54/04: plantillas carta Letter en blanco
                                (`fo-gj-*-blank-download.blade.php` + parciales `fo-gj-*-body.blade.php`);
@@ -394,9 +395,9 @@ resources/views/
   components/
     app-sidebar.blade.php      Sidebar de módulos (con catálogo de los 12)
     app-sidebar-icon.blade.php Heroicons inlineados (sin dependencia externa)
-    disciplinary/              kpi-card, status-badge, nav (sub-nav); `forms/` (vista previa FO-GJ-51)
+    disciplinary/              kpi-card, status-badge, nav (sub-nav; Historial solo nivel7); `forms/` (vista previa FO-GJ-51)
 docs/
-  ARCHITECTURE.md              Documentación detallada de arquitectura
+  ARCHITECTURE.md              Documentación detallada de arquitectura (incl. portal supervisor / historial)
   PDF.md                       Guía de construcción PDF Letter
   GAP_DISCIPLINARIO_ETAPAS_A_B.md  Matriz Etapas A/B
 ```
@@ -817,7 +818,7 @@ En `routes/web.php` existe **`POST /deploy/{token}`** con `DEPLOY_WEBHOOK_TOKEN`
 | `administrativa@sjlegalsuite.local` | administrativa | Crear informes y cargar evidencias |
 | `auditor@sjlegalsuite.local` | auditor | Consulta + exportación disciplinaria |
 | `operaciones@sjlegalsuite.local` | operaciones | Crear casos, revisar FO-GJ-51, **reasignar supervisor de notificación** en expedientes que aprobó |
-| `supervisor@sjlegalsuite.local` | supervisor | Portal **Supervisión** (`Mi trabajo`): FO-GJ-51 + bandeja de notificaciones por **zona de supervisión**; sin listado ni detalle de expedientes |
+| `supervisor@sjlegalsuite.local` | supervisor | Portal **Supervisión** (`Mi trabajo` + **Historial** textual): FO-GJ-51 + bandeja de notificaciones por **zona de supervisión**; sin listado, detalle ni documentos del expediente |
 | `operador@sjlegalsuite.local` | operador | Casos operativos en campo según políticas del módulo |
 | `programador@sjlegalsuite.local` | programador | Programación de fechas (planeación) |
 

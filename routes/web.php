@@ -32,6 +32,7 @@ use App\Livewire\Disciplinary\Dashboard;
 use App\Livewire\Disciplinary\FormatsCatalog;
 use App\Livewire\Disciplinary\InformesPendientes;
 use App\Livewire\Disciplinary\Administrativa\PendingDecisionHrIndex;
+use App\Livewire\Disciplinary\Supervisor\HistoryIndex as SupervisorHistoryIndex;
 use App\Livewire\Disciplinary\Supervisor\PendingEvidenceIndex;
 use App\Livewire\Employees\EmployeesIndex;
 use App\Livewire\Home;
@@ -116,6 +117,7 @@ Route::middleware(['auth', 'must-change-password', 'verified'])->group(function 
             ->name('evidences-pending.signed-preview');
         Route::get('evidences-pending/scanned-preview', SupervisorEvidenceUploadPreviewController::class)
             ->name('evidences-pending.scanned-preview');
+        Route::get('historial', SupervisorHistoryIndex::class)->name('historial.index');
         Route::get('decision-hr-pending', PendingDecisionHrIndex::class)->name('decision-hr-pending.index');
         Route::get('coordinations', CoordinationsIndex::class)->name('coordinations.index');
         Route::get('coordinations/{thread}/attachments/{attachment}/inline', DisciplinaryAgendaThreadAttachmentInlineController::class)

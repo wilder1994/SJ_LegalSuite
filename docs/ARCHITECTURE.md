@@ -351,12 +351,29 @@ Usuarios demo (password `SJseguridad2026`):
 
 ---
 
+## 9.1 Portal supervisor — Historial (solo texto)
+
+Ruta: `GET /disciplinary/historial` · Livewire `App\Livewire\Disciplinary\Supervisor\HistoryIndex` · servicio `App\Support\Disciplinary\SupervisorActivityHistoryService`.
+
+| Regla | Detalle |
+|-------|---------|
+| Quién | Solo rol Spatie **`nivel7`** (cargo supervisor). Otros roles → 403. |
+| Qué ve | Feed textual de **su** actividad: `InformeSubmission` con `submitted_by` = él; `DisciplinaryDocument` con `uploaded_by` = él y notas `NOTE_CITATION_EVIDENCE_PREFIX` / `NOTE_DECISION_EVIDENCE_PREFIX`. |
+| Qué no ve | Número de expediente, rutas/disco, preview PDF, descarga, enlace a `cases.show`. Coherente con `DisciplinaryCasePolicy::view` / `viewAny` (denegados a nivel7). |
+| UI | Agrupación por día, chips de tipo, búsqueda por nombre/cédula. Sin modales de documento. |
+| Tests | `tests/Feature/Disciplinary/SupervisorHistoryTest.php` |
+
+La cola **Mi trabajo** (`evidences-pending`) sigue siendo el hub operativo (pendientes). El **Historial** es la bitácora de lo ya cargado/enviado.
+
+---
+
 ## 10. Documentación adicional
 
 | Documento | Contenido |
 |-----------|-----------|
 | [`docs/PDF.md`](PDF.md) | Construcción de PDF: motor Dompdf/Browsershot, paginadores FO-GJ-03/04, plantillas Blade, rutas, pruebas y calibración |
 | [`docs/GAP_DISCIPLINARIO_ETAPAS_A_B.md`](GAP_DISCIPLINARIO_ETAPAS_A_B.md) | Brechas etapas A–B (incluye B10–B12: orden notificación→fechas, plantillas de artículos, redacción por género) |
+| [`README.md`](../README.md) | Visión de producto: portal supervisor, Historial, FO-GJ-51, zonas |
 
 ---
 

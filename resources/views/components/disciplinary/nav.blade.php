@@ -44,8 +44,14 @@
         $links[] = ['key' => 'formats', 'label' => 'Formatos', 'route' => route('disciplinary.formats.index'), 'active' => request()->routeIs('disciplinary.formats.*'), 'soon' => false];
     }
 
-    if (! auth()->user()->hasRole('nivel3')) {
-        $links[] = ['key' => 'history', 'label' => 'Historial', 'route' => null, 'active' => false, 'soon' => true];
+    if (auth()->user()->hasRole('nivel7')) {
+        $links[] = [
+            'key' => 'history',
+            'label' => 'Historial',
+            'route' => route('disciplinary.historial.index'),
+            'active' => request()->routeIs('disciplinary.historial.*'),
+            'soon' => false,
+        ];
     }
 
     $header = $isDark
