@@ -367,13 +367,29 @@ La cola **Mi trabajo** (`evidences-pending`) sigue siendo el hub operativo (pend
 
 ---
 
+## 9.2 Dashboard disciplinario (cockpit)
+
+Ruta: `GET /disciplinary/dashboard` · Livewire `App\Livewire\Disciplinary\Dashboard` · `App\Services\Disciplinary\DisciplinaryDashboardService::build`.
+
+| Pieza | Detalle |
+|-------|---------|
+| Alcance | Abogado (`nivel6` sin `nivel1`): solo asignados (`usesAssignedOnlyScope`). Admin / resto con `viewDashboard`: cartera global. |
+| Chips | `actionChips()` → listado filtrado (cerrados, vencidos, por vencer, notif. pendiente, pool/pre-informe…). |
+| Donas A–F | Apex en `resources/js/disciplinary-dashboard.js`. Grid Blade `2 / sm:4 / xl:7` (no `lg:7`: con sidebar el main a ~1024px aplastaba columnas). Ancho de chart = celda real (sin piso 96px); `.apexcharts-canvas` centrado tras `render`/`resize`. |
+| Layout | Cabecera compacta (sin banner «Cartera vacía» ni subtítulo KPI). Mapa \| Top + Faltas con `min-h`. Franja **Mi carga** / **Carga por abogado**. Shell: `layouts/app` → `main` con `overflow-y-auto` + `min-h-0`. |
+| Tests | `tests/Feature/Disciplinary/DisciplinaryDashboardScopeTest.php` |
+
+Detalle de producto y rutas: `README.md` (tabla del módulo Disciplinarios).
+
+---
+
 ## 10. Documentación adicional
 
 | Documento | Contenido |
 |-----------|-----------|
 | [`docs/PDF.md`](PDF.md) | Construcción de PDF: motor Dompdf/Browsershot, paginadores FO-GJ-03/04, plantillas Blade, rutas, pruebas y calibración |
 | [`docs/GAP_DISCIPLINARIO_ETAPAS_A_B.md`](GAP_DISCIPLINARIO_ETAPAS_A_B.md) | Brechas etapas A–B (incluye B10–B12: orden notificación→fechas, plantillas de artículos, redacción por género) |
-| [`README.md`](../README.md) | Visión de producto: portal supervisor, Historial, FO-GJ-51, zonas |
+| [`README.md`](../README.md) | Visión de producto: portal supervisor, Historial, dashboard disciplinario (cockpit), FO-GJ-51, zonas |
 
 ---
 

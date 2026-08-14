@@ -36,7 +36,7 @@
     <body class="font-sans antialiased bg-slate-50 text-slate-900 dark:bg-dash-void dark:text-slate-100">
         <div x-data="{ sidebarOpen: false }"
              x-on:sidebar-toggle.window="sidebarOpen = !sidebarOpen"
-             class="min-h-screen flex">
+             class="flex h-screen max-h-screen min-h-0 overflow-hidden">
 
             {{-- Backdrop móvil --}}
             <div x-show="sidebarOpen"
@@ -47,7 +47,8 @@
 
             <x-app-sidebar :variant="$sidebarVariant" />
 
-            <div class="flex-1 flex flex-col min-w-0">
+            {{-- min-h-0: permite que main reciba altura real del flex y que cockpits llenen el hueco sin pelear con 100dvh. --}}
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
 
                 @php
                     $hasModuleNav = ! empty(trim($__env->yieldPushContent('module-nav')));
@@ -87,9 +88,10 @@
                     </header>
                 @endif
 
-                <main class="flex-1 overflow-y-auto relative">
+                {{-- overflow-y-auto: válvula de scroll de página si el contenido supera el hueco (sin clip). --}}
+                <main class="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
                     <div class="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(217,70,239,0.18),transparent_55%),radial-gradient(ellipse_90%_60%_at_100%_50%,rgba(34,211,238,0.12),transparent_45%),radial-gradient(ellipse_70%_50%_at_0%_80%,rgba(251,146,60,0.08),transparent_40%)] dark:block"></div>
-                    <div class="relative">
+                    <div class="relative flex min-h-full flex-1 flex-col">
                         {{ $slot }}
                     </div>
                 </main>

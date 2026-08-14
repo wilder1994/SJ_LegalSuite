@@ -37,6 +37,7 @@ class DisciplinaryDashboardService
      *     topMunicipalities: list<array<string, mixed>>,
      *     myWorkload: ?array<string, mixed>,
      *     lawyerWorkloadTop: list<array<string, mixed>>,
+     *     actionChips: list<array{key:string, label:string, count:int|null, href:string}>,
      * }
      */
     public function build(User $actor): array
@@ -60,7 +61,106 @@ class DisciplinaryDashboardService
             'topMunicipalities' => $this->topMunicipalitiesFromPins($pins, 5),
             'myWorkload' => $assignedOnly ? ($lawyerRows[0] ?? $this->emptyWorkloadRow($actor)) : null,
             'lawyerWorkloadTop' => $assignedOnly ? [] : array_slice($lawyerRows, 0, 5),
+            'actionChips' => $this->actionChips($actor, $assignedOnly),
         ];
+    }
+
+    /**
+     * Chips de acción del tablero → listado filtrado (taxonomía rail / alcance).
+     *
+     * @return list<array{key:string, label:string, count:int|null, href:string}>
+     */
+    public function actionChips(User $actor, bool $assignedOnly): array
+    {
+        $casesIndex = route('disciplinary.cases.index');
+        $alerts = app(\App\Services\AlertsService::class)->summary(1, $actor);
+
+        $closed = (int) DisciplinaryCase::query()
+            ->when(true, fn ($q) => $this->applyCaseScope($q, $actor, $assignedOnly))
+            ->closed()
+            ->count();
+
+        $notificationPending = $this->notificationEvidencePendingCount($actor, $assignedOnly);
+
+        $chips = [
+            [
+                'key' => 'all',
+                'label' => $assignedOnly ? 'Mis casos' : 'Alcance',
+                'count' => null,
+                'href' => $casesIndex,
+            ],
+            [
+                'key' => 'cerrados',
+                'label' => 'Cerrados',
+                'count' => $closed,
+                'href' => $casesIndex.'?'.http_build_query(['stage' => WorkflowStageBuckets::CLOSED_KEY]),
+            ],
+            [
+                'key' => 'vencidos',
+                'label' => 'Vencidos',
+                'count' => (int) ($alerts['vencidos']['count'] ?? 0),
+                'href' => $casesIndex,
+            ],
+            [
+                'key' => 'proximos',
+                'label' => 'Por vencer',
+                'count' => (int) ($alerts['proximos']['count'] ?? 0),
+                'href' => $casesIndex,
+            ],
+        ];
+
+        if (! $assignedOnly) {
+            $chips[] = [
+                'key' => 'sin_asignar',
+                'label' => 'Sin asignar',
+                'count' => (int) ($alerts['sin_asignar']['count'] ?? 0),
+                'href' => $casesIndex.'?'.http_build_query(['stage' => 'A']),
+            ];
+            $chips[] = [
+                'key' => 'pend_decision',
+                'label' => 'Pend. decisión',
+                'count' => (int) ($alerts['pendientes_decision']['count'] ?? 0),
+                'href' => $casesIndex.'?'.http_build_query(['stage' => 'D']),
+            ];
+        } else {
+            $chips[] = [
+                'key' => 'pool',
+                'label' => 'Pool informe',
+                'count' => (int) DisciplinaryCase::query()->inInformePool()->count(),
+                'href' => $casesIndex.'?'.http_build_query(['stage' => 'A']),
+            ];
+        }
+
+        $chips[] = [
+            'key' => 'notif',
+            'label' => 'Notif. pendiente',
+            'count' => $notificationPending,
+            'href' => $casesIndex.'?'.http_build_query(['stage' => 'B']),
+        ];
+
+        return $chips;
+    }
+
+    private function notificationEvidencePendingCount(User $actor, bool $assignedOnly): int
+    {
+        $base = DisciplinaryCase::query()
+            ->when(true, fn ($q) => $this->applyCaseScope($q, $actor, $assignedOnly))
+            ->open();
+
+        $citation = (clone $base)
+            ->whereNotNull('fo_gj_03_generated_at')
+            ->whereNull('citation_evidence_uploaded_at')
+            ->count();
+
+        $decision = 0;
+        if (\App\Support\Disciplinary\DecisionWorkflowSchema::isReady()) {
+            $decision = (clone $base)
+                ->whereNotNull('decision_comunicado_generated_at')
+                ->whereNull('decision_evidence_uploaded_at')
+                ->count();
+        }
+
+        return $citation + $decision;
     }
 
     /**

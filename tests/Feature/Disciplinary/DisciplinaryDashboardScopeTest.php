@@ -73,7 +73,26 @@ class DisciplinaryDashboardScopeTest extends TestCase
             ->assertSee('Top municipios')
             ->assertSee('Casos por tipo de falta')
             ->assertSee('Mi carga')
+            ->assertSee('Cerrados')
+            ->assertSee('Notif. pendiente')
             ->assertDontSee('Carga por abogado');
+    }
+
+    public function test_empty_lawyer_dashboard_keeps_full_cockpit_layout(): void
+    {
+        $lawyer = $this->makeLawyer('lawyer-empty-dash@test.local');
+
+        Livewire::actingAs($lawyer)
+            ->test(Dashboard::class)
+            ->assertSee('Mi tablero')
+            ->assertDontSee('Cartera vacía')
+            ->assertDontSee('casos asignados')
+            ->assertSee('Casos por ciudad')
+            ->assertSee('Top municipios')
+            ->assertSee('Casos por tipo de falta')
+            ->assertSee('Mi carga')
+            ->assertSee('Pool informe')
+            ->assertDontSee('Aún no tiene casos asignados en su cartera.');
     }
 
     public function test_admin_dashboard_view_shows_lawyer_workload_ranking(): void
@@ -91,7 +110,23 @@ class DisciplinaryDashboardScopeTest extends TestCase
             ->test(Dashboard::class)
             ->assertSee('Dashboard')
             ->assertSee('Carga por abogado')
+            ->assertSee('Sin asignar')
+            ->assertSee('Pend. decisión')
             ->assertDontSee('Mi carga');
+    }
+
+    public function test_action_chips_include_closed_count(): void
+    {
+        $lawyer = $this->makeLawyer('lawyer-chips@test.local');
+        $this->makeCase($lawyer, 'OPEN-1', StageType::DECISION, CaseStatus::DECISION);
+        $this->makeCase($lawyer, 'CLOSED-1', StageType::DECISION, CaseStatus::ARCHIVADO);
+
+        $chips = collect(app(DisciplinaryDashboardService::class)->build($lawyer)['actionChips']);
+        $cerrados = $chips->firstWhere('key', 'cerrados');
+
+        $this->assertNotNull($cerrados);
+        $this->assertSame(1, $cerrados['count']);
+        $this->assertStringContainsString('stage=cerrados', $cerrados['href']);
     }
 
     public function test_dashboard_includes_all_active_faults_with_zeros(): void

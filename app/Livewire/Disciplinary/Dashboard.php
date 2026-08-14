@@ -54,6 +54,7 @@ class Dashboard extends Component
             'topMunicipalities' => $data['topMunicipalities'],
             'myWorkload' => $data['myWorkload'],
             'lawyerWorkloadTop' => $data['lawyerWorkloadTop'],
+            'actionChips' => $data['actionChips'],
         ]);
     }
 }
